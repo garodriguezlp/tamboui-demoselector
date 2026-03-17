@@ -50,13 +50,25 @@ import dev.tamboui.tui.event.KeyEvent;
 
 /**
  * Architecture overview:
- * This is an explicit MVC implementation adapted to TamboUI's render loop.
- * Model: DemoSelectorModel owns all mutable app state and derived list state.
- * View: DemoSelectorView renders purely from model state.
- * Controller: DemoSelectorController translates key events into model mutations.
+ * This is a clean MVC implementation adapted to TamboUI's immediate-mode render loop.
  *
- * Unlike listener-driven console MVC demos, TamboUI redraws after handled events.
- * Flow is: key event -> controller updates model -> EventResult.HANDLED -> framework calls render().
+ * Model (DemoSelectorModel): Pure Java, no framework coupling.
+ *   Owns mutable app state (filter, expanded modules, selection index, selected demo).
+ *   Derives UI presentation state (display list, title, description content as plain data).
+ *   All queries return pure Java types (String, int, List, etc.).
+ *
+ * View (DemoSelectorView): Framework coupling lives here.
+ *   Reads model state once per render.
+ *   Rebuilds the entire UI element tree from model state (immediate-mode pattern).
+ *   Returns TamboUI Elements; handles all Toolkit DSL.
+ *
+ * Controller (DemoSelectorController): Event translation.
+ *   Receives key events.
+ *   Translates them into model mutations.
+ *   Returns EventResult; framework redraws via render() callback.
+ *
+ * Flow: key event -> controller updates model -> return HANDLED -> framework calls render().
+ * View rebuilds UI from fresh model state each frame. Selection state lives in model, not widgets.
  */
 public class DemoSelectorRefactored extends ToolkitApp {
 
@@ -100,34 +112,19 @@ public class DemoSelectorRefactored extends ToolkitApp {
 
 final class DemoSelectorModel {
 
-    private final ListElement<?> demoList;
     private final Map<String, List<DemoInfo>> demosByModule = new TreeMap<>();
     private final Set<String> expandedModules = new HashSet<>();
     private final List<DisplayItem> displayItems = new ArrayList<>();
 
     private String filter = "";
     private String selectedDemo = null;
-
-    DemoSelectorModel() {
-        demoList = list()
-            .highlightSymbol("> ")
-            .highlightColor(Color.YELLOW)
-            .autoScroll()
-            .scrollbar()
-            .scrollbarThumbColor(Color.CYAN);
-    }
+    private int selectedIndex = 0;
 
     void initialize() {
         initializeStaticDemos();
         expandedModules.addAll(demosByModule.keySet());
         rebuildDisplayList();
-        if (!displayItems.isEmpty()) {
-            demoList.selected(findFirstSelectable());
-        }
-    }
-
-    ListElement<?> demoList() {
-        return demoList;
+        selectedIndex = findFirstSelectable();
     }
 
     List<DisplayItem> displayItems() {
@@ -147,11 +144,11 @@ final class DemoSelectorModel {
     }
 
     int selectedIndex() {
-        return demoList.selected();
+        return selectedIndex;
     }
 
     void selectIndex(int index) {
-        demoList.selected(index);
+        selectedIndex = index;
     }
 
     String title() {
@@ -173,40 +170,45 @@ final class DemoSelectorModel {
         return null;
     }
 
-    Element descriptionContent() {
+    /**
+     * Pure data accessor for view to build description panel.
+     * Returns null if no selection; otherwise structured data about selected item.
+     */
+    DescriptionData descriptionData() {
         var selected = selectedItem();
         if (selected == null) {
-            return text("");
+            return new DescriptionData(DescriptionData.Kind.EMPTY, "", List.of());
         }
         if (selected.demo() != null) {
-            return demoDescription(selected.demo());
+            return demoDescriptionData(selected.demo());
         }
-        return moduleDescription(selected);
+        return moduleDescriptionData(selected);
     }
 
-    private Element demoDescription(DemoInfo demo) {
-        var tags = demo.tags();
-        var tagsLine = tags.isEmpty() ? "" : "Tags: " + String.join(", ", tags);
-        return column(
-            text(tagsLine).magenta().overflow(Overflow.WRAP_WORD),
-            text(""),
-            text(demo.description()).overflow(Overflow.WRAP_WORD)
-        );
+    private DescriptionData demoDescriptionData(DemoInfo demo) {
+        var tagsLine = demo.tags().isEmpty() ? "" : "Tags: " + String.join(", ", demo.tags());
+        var lines = new ArrayList<String>();
+        if (!tagsLine.isEmpty()) {
+            lines.add(tagsLine);
+            lines.add("");
+        }
+        lines.add(demo.description());
+        return new DescriptionData(DescriptionData.Kind.DEMO, "", lines);
     }
 
-    private Element moduleDescription(DisplayItem selected) {
+    private DescriptionData moduleDescriptionData(DisplayItem selected) {
         var count = demosByModule.get(selected.module()).size();
         var hint = selected.expanded()
             ? "Press ← or Enter to collapse."
             : "Press → or Enter to expand.";
 
-        return column(
-            text(selected.module()).bold().cyan().length(1),
-            text(""),
-            text(count + " demo" + (count != 1 ? "s" : "") + " in this module.").length(1),
-            text(""),
-            text(hint).dim().length(1)
-        );
+        var lines = new ArrayList<String>();
+        lines.add("");
+        lines.add(count + " demo" + (count != 1 ? "s" : "") + " in this module.");
+        lines.add("");
+        lines.add(hint);
+
+        return new DescriptionData(DescriptionData.Kind.MODULE, selected.module(), lines);
     }
 
     boolean hasFilter() {
@@ -244,12 +246,12 @@ final class DemoSelectorModel {
             for (var i = 0; i < displayItems.size(); i++) {
                 var item = displayItems.get(i);
                 if (item.demo() == null && item.module().equals(currentModule)) {
-                    demoList.selected(i);
+                    selectIndex(i);
                     return;
                 }
             }
         }
-        demoList.selected(findFirstSelectable());
+        selectIndex(findFirstSelectable());
     }
 
     void chooseDemoAndQuit(DemoInfo demo, Runnable quitAction) {
@@ -260,7 +262,7 @@ final class DemoSelectorModel {
     void moveToNextModuleHeader() {
         for (int i = selectedIndex() + 1; i < listSize(); i++) {
             if (displayItems.get(i).demo() == null) {
-                demoList.selected(i);
+                selectIndex(i);
                 return;
             }
         }
@@ -269,7 +271,7 @@ final class DemoSelectorModel {
     void moveToPreviousModuleHeader() {
         for (int i = selectedIndex() - 1; i >= 0; i--) {
             if (displayItems.get(i).demo() == null) {
-                demoList.selected(i);
+                selectIndex(i);
                 return;
             }
         }
@@ -278,7 +280,7 @@ final class DemoSelectorModel {
     void moveToParentModuleHeader() {
         for (int i = selectedIndex() - 1; i >= 0; i--) {
             if (displayItems.get(i).demo() == null) {
-                demoList.selected(i);
+                selectIndex(i);
                 return;
             }
         }
@@ -287,7 +289,7 @@ final class DemoSelectorModel {
     void moveToFirstChildIfPresent() {
         var current = selectedIndex();
         if (current + 1 < listSize() && displayItems.get(current + 1).demo() != null) {
-            demoList.selected(current + 1);
+            selectIndex(current + 1);
         }
     }
 
@@ -301,7 +303,7 @@ final class DemoSelectorModel {
 
     private void refreshAfterFilterChange() {
         rebuildDisplayList();
-        demoList.selected(findFirstSelectable());
+        selectIndex(findFirstSelectable());
     }
 
     private void rebuildDisplayList() {
@@ -392,7 +394,16 @@ final class DemoSelectorView {
     }
 
     private Element listPanel(java.util.function.Function<KeyEvent, EventResult> keyHandler) {
-        return panel(model.demoList().items(displayLines()))
+        var listWidget = list()
+            .highlightSymbol("> ")
+            .highlightColor(Color.YELLOW)
+            .autoScroll()
+            .scrollbar()
+            .scrollbarThumbColor(Color.CYAN)
+            .items(displayLines())
+            .selected(model.selectedIndex());
+
+        return panel(listWidget)
             .title(model.title())
             .rounded()
             .borderColor(model.listBorderColor())
@@ -410,10 +421,35 @@ final class DemoSelectorView {
     }
 
     private Element descriptionPanel() {
-        return panel(model.descriptionContent())
+        var desc = model.descriptionData();
+        return panel(buildDescriptionContent(desc))
             .title("Description")
             .rounded()
             .borderColor(Color.DARK_GRAY);
+    }
+
+    private Element buildDescriptionContent(DescriptionData descData) {
+        return switch (descData.kind()) {
+            case EMPTY -> text("");
+            case DEMO -> column(
+                text(descData.lines().isEmpty() ? "" : descData.lines().get(0))
+                    .magenta().overflow(Overflow.WRAP_WORD),
+                text(""),
+                descData.lines().size() > 1 ?
+                    text(descData.lines().get(descData.lines().size() - 1)).overflow(Overflow.WRAP_WORD) :
+                    text("")
+            );
+            case MODULE -> column(
+                text(descData.title()).bold().cyan().length(1),
+                text(""),
+                descData.lines().isEmpty() ? text("") :
+                    text(descData.lines().get(0)).length(1),
+                text(""),
+                descData.lines().size() > 1 ?
+                    text(descData.lines().get(descData.lines().size() - 1)).dim().length(1) :
+                    text("")
+            );
+        };
     }
 
     private Element footerPanel() {
@@ -673,5 +709,16 @@ record DisplayItem(String module, DemoInfo demo, boolean expanded, int demoCount
             return icon + " " + module + " (" + demoCount + ")";
         }
         return "    " + demo.displayName();
+    }
+}
+
+/**
+ * Pure Java data structure for description panel rendering.
+ * View uses this to decide what UI to build without coupling to model internals.
+ */
+record DescriptionData(DescriptionData.Kind kind, String title, List<String> lines) {
+
+    enum Kind {
+        EMPTY, DEMO, MODULE
     }
 }
