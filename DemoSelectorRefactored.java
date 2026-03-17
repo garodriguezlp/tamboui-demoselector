@@ -48,28 +48,6 @@ import dev.tamboui.tui.bindings.Actions;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.tui.event.KeyEvent;
 
-/**
- * Architecture overview:
- * This is a clean MVC implementation adapted to TamboUI's immediate-mode render loop.
- *
- * Model (DemoSelectorModel): Pure Java, no framework coupling.
- *   Owns mutable app state (filter, expanded modules, selection index, selected demo).
- *   Derives UI presentation state (display list, title, description content as plain data).
- *   All queries return pure Java types (String, int, List, etc.).
- *
- * View (DemoSelectorView): Framework coupling lives here.
- *   Reads model state once per render.
- *   Rebuilds the entire UI element tree from model state (immediate-mode pattern).
- *   Returns TamboUI Elements; handles all Toolkit DSL.
- *
- * Controller (DemoSelectorController): Event translation.
- *   Receives key events.
- *   Translates them into model mutations.
- *   Returns EventResult; framework redraws via render() callback.
- *
- * Flow: key event -> controller updates model -> return HANDLED -> framework calls render().
- * View rebuilds UI from fresh model state each frame. Selection state lives in model, not widgets.
- */
 public class DemoSelectorRefactored extends ToolkitApp {
 
     private final DemoSelectorModel model;
@@ -112,8 +90,11 @@ public class DemoSelectorRefactored extends ToolkitApp {
 
 final class DemoSelectorModel {
 
+    /** The complete dataset, keyed by module name and ordered alphabetically. */
     private final Map<String, List<DemoInfo>> demosByModule = new TreeMap<>();
+    /** UI state tracking which modules are currently expanded in the list. */
     private final Set<String> expandedModules = new HashSet<>();
+    /** The currently visible list items, derived from {@code demosByModule}, {@code expandedModules}, and the active filter. */
     private final List<DisplayItem> displayItems = new ArrayList<>();
 
     private String filter = "";
@@ -415,9 +396,17 @@ final class DemoSelectorView {
     private List<String> displayLines() {
         List<String> lines = new ArrayList<>();
         for (var item : model.displayItems()) {
-            lines.add(item.toDisplayString());
+            lines.add(toDisplayString(item));
         }
         return lines;
+    }
+
+    private String toDisplayString(DisplayItem item) {
+        if (item.demo() == null) {
+            var icon = item.expanded() ? "▼" : "▶";
+            return icon + " " + item.module() + " (" + item.demoCount() + ")";
+        }
+        return "    " + item.demo().displayName();
     }
 
     private Element descriptionPanel() {
@@ -698,18 +687,10 @@ final class DemoSelectorController {
     }
 }
 
-record DemoInfo(String name, String displayName, String description, String module, Set<String> tags) {
+record DisplayItem(String module, DemoInfo demo, boolean expanded, int demoCount) {
 }
 
-record DisplayItem(String module, DemoInfo demo, boolean expanded, int demoCount) {
-
-    String toDisplayString() {
-        if (demo == null) {
-            var icon = expanded ? "▼" : "▶";
-            return icon + " " + module + " (" + demoCount + ")";
-        }
-        return "    " + demo.displayName();
-    }
+record DemoInfo(String name, String displayName, String description, String module, Set<String> tags) {
 }
 
 /**
