@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_17" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" packagePrefix="dev.tamboui.demo" />
+    </content>
+    <orderEntry type="jdk" jdkName="17" jdkType="JavaSDK" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="tamboui-demoselector-jbang">
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-toolkit/0.1.0/tamboui-toolkit-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-core/0.1.0/tamboui-core-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-widgets/0.1.0/tamboui-widgets-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-tui/0.1.0/tamboui-tui-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-annotations/0.1.0/tamboui-annotations-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-css/0.1.0/tamboui-css-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-jline3-backend/0.1.0/tamboui-jline3-backend-0.1.0.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/org/jline/jline/3.25.1/jline-3.25.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-toolkit/0.1.0/tamboui-toolkit-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-core/0.1.0/tamboui-core-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-widgets/0.1.0/tamboui-widgets-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-tui/0.1.0/tamboui-tui-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-annotations/0.1.0/tamboui-annotations-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-css/0.1.0/tamboui-css-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/dev/tamboui/tamboui-jline3-backend/0.1.0/tamboui-jline3-backend-0.1.0-sources.jar!/" />
+          <root url="jar://$MAVEN_REPOSITORY$/org/jline/jline/3.25.1/jline-3.25.1-sources.jar!/" />
+        </SOURCES>
+      </library>
+    </orderEntry>
+  </component>
+</module>

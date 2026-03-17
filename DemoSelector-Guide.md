@@ -6,11 +6,13 @@ This document explains the app in [DemoSelector.java](DemoSelector.java) from th
 2. Which TamboUI abstractions it uses, and at what level.
 3. How you could restructure it, still in a single file, into a clearer MVC-style design.
 
-The goal is not just to understand this file. The goal is to give you the mental model you need to build your own TamboUI application confidently.
+The goal is not just to understand this file. The goal is to give you the mental model you need to build your own
+TamboUI application confidently.
 
 ## 1. Executive Summary
 
-This app is a full-screen terminal UI built with the highest-level full-screen API that TamboUI offers for this use case:
+This app is a full-screen terminal UI built with the highest-level full-screen API that TamboUI offers for this use
+case:
 
 - `ToolkitApp` from `tamboui-toolkit`
 - The declarative Toolkit DSL via `text()`, `panel()`, `dock()`, `column()`, `list()`
@@ -62,7 +64,8 @@ That means:
 
 Important consequence: this app is not using the Panama backend. It is using the JLine backend.
 
-That matters for the key-handling discussion later, because some key encoding differences you observed are partly terminal-level and partly backend-level.
+That matters for the key-handling discussion later, because some key encoding differences you observed are partly
+terminal-level and partly backend-level.
 
 ## 3. Where This Sits in TamboUI's API Stack
 
@@ -157,19 +160,19 @@ That distinction explains a lot of the design in this file.
 
 Here is every important TamboUI import in the file and how to classify it.
 
-| Import | Role in this app | Layer | Abstraction level |
-| --- | --- | --- | --- |
-| `ToolkitApp` | Application base class | Toolkit | High |
-| `Element` | Root UI node type returned by `render()` | Toolkit | High |
-| `ListElement<?>` | Stateful list element wrapper | Toolkit | High |
-| `EventResult` | Event routing result | Toolkit | High |
-| `Toolkit.*` static factories | Declarative element DSL | Toolkit | High |
-| `Actions` | Semantic action names | TUI bindings | Mid/high |
-| `KeyEvent` | Actual input event object | TUI | Mid |
-| `KeyCode` | Low-level key identity | TUI | Mid/low |
-| `Constraint` | Layout sizing primitive | Core/layout | Mid |
-| `Color` | Styling primitive | Core/style | Mid |
-| `Overflow` | Text/layout behavior | Toolkit/Core styling | Mid |
+| Import                       | Role in this app                         | Layer                | Abstraction level |
+|------------------------------|------------------------------------------|----------------------|-------------------|
+| `ToolkitApp`                 | Application base class                   | Toolkit              | High              |
+| `Element`                    | Root UI node type returned by `render()` | Toolkit              | High              |
+| `ListElement<?>`             | Stateful list element wrapper            | Toolkit              | High              |
+| `EventResult`                | Event routing result                     | Toolkit              | High              |
+| `Toolkit.*` static factories | Declarative element DSL                  | Toolkit              | High              |
+| `Actions`                    | Semantic action names                    | TUI bindings         | Mid/high          |
+| `KeyEvent`                   | Actual input event object                | TUI                  | Mid               |
+| `KeyCode`                    | Low-level key identity                   | TUI                  | Mid/low           |
+| `Constraint`                 | Layout sizing primitive                  | Core/layout          | Mid               |
+| `Color`                      | Styling primitive                        | Core/style           | Mid               |
+| `Overflow`                   | Text/layout behavior                     | Toolkit/Core styling | Mid               |
 
 ### 4.1 High-level abstractions used
 
@@ -267,7 +270,8 @@ This app uses both kinds:
 - selected row index in `demoList`
 - scroll position in `demoList`
 
-That is an example of a healthy TamboUI pattern: let stateful toolkit elements own their internal view mechanics when appropriate.
+That is an example of a healthy TamboUI pattern: let stateful toolkit elements own their internal view mechanics when
+appropriate.
 
 ### 5.2 Second: find the lifecycle
 
@@ -403,7 +407,8 @@ That is a design choice. It is valid, but it has tradeoffs:
 - Con: selection state is less explicit in your domain/controller model
 - Con: testing application logic in isolation becomes harder
 
-For small apps, this is fine. For larger apps, many teams prefer to move selection into a controller and push it into the widget during render.
+For small apps, this is fine. For larger apps, many teams prefer to move selection into a controller and push it into
+the widget during render.
 
 ## 7. The Main Architectural Pattern Already Present
 
@@ -469,9 +474,12 @@ That is a pragmatic and correct debugging move for terminal software.
 
 ```java
 List<String> lines = new ArrayList<>();
-for (var item : displayItems) {
-    lines.add(item.toDisplayString());
-}
+for(
+var item :displayItems){
+        lines.
+
+add(item.toDisplayString());
+        }
 ```
 
 This is a presentation projection from a richer record to plain rendered lines.
@@ -505,8 +513,12 @@ This line matters a lot conceptually:
 
 ```java
 .id("demo-list")
-.focusable()
-.onKeyEvent(this::handleKey)
+.
+
+focusable()
+.
+
+onKeyEvent(this::handleKey)
 ```
 
 This is how the Toolkit DSL connects the visual element tree to event routing and focus management.
@@ -542,7 +554,8 @@ The framework source makes this explicit.
 
 At the TUI level, `TuiRunner` uses the boolean returned by the event handler to decide whether to render another frame.
 
-At the Toolkit level, `ToolkitRunner.handleEvent(...)` routes the event to elements and returns `true` when the result is handled.
+At the Toolkit level, `ToolkitRunner.handleEvent(...)` routes the event to elements and returns `true` when the result
+is handled.
 
 So in a Toolkit app:
 
@@ -580,11 +593,13 @@ It may feel less magical here for two reasons:
 
 #### Reason 1: this file makes state recomputation explicit
 
-The app manually recomputes `displayItems` after state changes. That can look like a UI refresh operation, but it is really just preparing the next frame's data.
+The app manually recomputes `displayItems` after state changes. That can look like a UI refresh operation, but it is
+really just preparing the next frame's data.
 
 #### Reason 2: you are using the JLine backend here, not Panama
 
-The docs describe the same rendering model across backends, but input decoding can feel different in practice between backends and terminals.
+The docs describe the same rendering model across backends, but input decoding can feel different in practice between
+backends and terminals.
 
 The redraw model is not fundamentally different:
 
@@ -649,7 +664,8 @@ That is the right model for timers, async tasks, downloads, or long-running oper
 
 ## 11. Why the Special Keys Were Painful
 
-This file contains excellent evidence that you already hit one of the hardest parts of terminal UI programming: terminals do not send idealized keyboard events.
+This file contains excellent evidence that you already hit one of the hardest parts of terminal UI programming:
+terminals do not send idealized keyboard events.
 
 ### 11.1 Space is semantically overloaded
 
@@ -658,7 +674,7 @@ TamboUI bindings docs say `SELECT` typically maps to Enter and Space.
 That means this condition is expected behavior:
 
 ```java
-if (event.matches(Actions.SELECT))
+if(event.matches(Actions.SELECT))
 ```
 
 The problem is your app also wants plain space to be text input for the filter.
@@ -675,7 +691,9 @@ var isPlainSpace = event.code() == KeyCode.CHAR
         && event.character() == ' '
         && !event.hasCtrl()
         && !event.hasAlt();
-if (event.matches(Actions.SELECT) && !isPlainSpace) { ... }
+if(event.
+
+matches(Actions.SELECT) &&!isPlainSpace){...}
 ```
 
 That is a correct and pragmatic resolution.
@@ -771,7 +789,8 @@ So it is a monolithic application object.
 
 Because the app is small.
 
-For a small file, this architecture is perfectly workable. The state is not huge, the commands are understandable, and the render logic is still readable.
+For a small file, this architecture is perfectly workable. The state is not huge, the commands are understandable, and
+the render logic is still readable.
 
 The issue is not correctness. The issue is scale and clarity.
 
@@ -801,7 +820,8 @@ So the file is not far from MVC. It just has not been separated structurally.
 
 Yes. You can absolutely improve the architecture while keeping everything in a single source file.
 
-In fact, the TamboUI MVC guide's own examples are very compatible with a single-file approach using nested static classes.
+In fact, the TamboUI MVC guide's own examples are very compatible with a single-file approach using nested static
+classes.
 
 ### 13.1 Recommended single-file shape
 
@@ -824,12 +844,20 @@ public final class DemoSelector extends ToolkitApp {
         return view.render().onKeyEvent(keyHandler::handle);
     }
 
-    static final class Controller { ... }
-    static final class View { ... }
-    static final class KeyHandler { ... }
+    static final class Controller { ...
+    }
 
-    record DemoInfo(...) { }
-    record DisplayItem(...) { }
+    static final class View { ...
+    }
+
+    static final class KeyHandler { ...
+    }
+
+    record DemoInfo(...) {
+    }
+
+    record DisplayItem(...) {
+    }
 }
 ```
 
@@ -937,7 +965,8 @@ Why:
 
 - current behavior already depends heavily on selection semantics
 - hierarchical navigation is app logic, not merely widget logic
-- a future "run selected demo", "preview selected demo", or multi-pane synchronized UI will be easier with explicit selection state
+- a future "run selected demo", "preview selected demo", or multi-pane synchronized UI will be easier with explicit
+  selection state
 
 If you want to stay lightweight, you can also use a hybrid approach:
 
@@ -1047,22 +1076,33 @@ public final class DemoSelector extends ToolkitApp {
             }
         }
 
-        void toggleModule(String module) { ... }
-        void chooseDemo(String name) { selectedDemo = name; }
-        String selectedDemoOrNull() { return selectedDemo; }
-        void rebuildDisplayList() { ... }
-        void initializeStaticDemos() { ... }
-        void expandAllModules() { expandedModules.addAll(demosByModule.keySet()); }
+        void toggleModule(String module) { ...}
+
+        void chooseDemo(String name) {
+            selectedDemo = name;
+        }
+
+        String selectedDemoOrNull() {
+            return selectedDemo;
+        }
+
+        void rebuildDisplayList() { ...}
+
+        void initializeStaticDemos() { ...}
+
+        void expandAllModules() {
+            expandedModules.addAll(demosByModule.keySet());
+        }
     }
 
     static final class View {
         private final Controller controller;
         private final ListElement<?> demoList = list()
-            .highlightSymbol("> ")
-            .highlightColor(Color.YELLOW)
-            .autoScroll()
-            .scrollbar()
-            .scrollbarThumbColor(Color.CYAN);
+                .highlightSymbol("> ")
+                .highlightColor(Color.YELLOW)
+                .autoScroll()
+                .scrollbar()
+                .scrollbarThumbColor(Color.CYAN);
 
         View(Controller controller) {
             this.controller = controller;
@@ -1070,16 +1110,16 @@ public final class DemoSelector extends ToolkitApp {
 
         Element render(java.util.function.Function<KeyEvent, EventResult> handler) {
             return dock()
-                .top(...)
+                    .top(...)
                 .left(panel(demoList.items(lines()))
                     .id("demo-list")
                     .focusable()
                     .onKeyEvent(handler::apply), Constraint.percentage(50))
-                .center(...)
+                    .center(...)
                 .bottom(...);
         }
 
-        private List<String> lines() { ... }
+        private List<String> lines() { ...}
     }
 
     static final class KeyHandler {
@@ -1100,9 +1140,11 @@ public final class DemoSelector extends ToolkitApp {
     }
 
     record DemoInfo(String name, String displayName, String description,
-                    String module, Set<String> tags) { }
+                    String module, Set<String> tags) {
+    }
 
-    record DisplayItem(String module, DemoInfo demo, boolean expanded, int demoCount) { }
+    record DisplayItem(String module, DemoInfo demo, boolean expanded, int demoCount) {
+    }
 }
 ```
 
@@ -1114,7 +1156,8 @@ Yes.
 
 The TamboUI docs explicitly present MVC as the recommended application structure for maintainable Toolkit apps.
 
-Their model is slightly different from classic GUI MVC terminology because the view is literally a function that returns an `Element`, but the idea is standard:
+Their model is slightly different from classic GUI MVC terminology because the view is literally a function that returns
+an `Element`, but the idea is standard:
 
 - controller owns state and commands
 - view is pure state-to-UI
@@ -1132,7 +1175,8 @@ A fair classification would be:
 
 That is not criticism. It is a perfectly common first shape for a small TUI.
 
-But if your goal is to become expert and build a more serious app, I would not keep growing it in the current monolithic form.
+But if your goal is to become expert and build a more serious app, I would not keep growing it in the current monolithic
+form.
 
 ## 18. What Internal TamboUI Mechanics Matter Most Here
 
@@ -1176,7 +1220,8 @@ Without `id()` and `focusable()`, keyboard routing would not work the same way.
 
 `ListElement` is important because it stores some UI state between frames.
 
-This is one of the places where TamboUI is not "pure function only" in the strictest sense. The render tree is rebuilt, but certain element instances can own persistent widget state.
+This is one of the places where TamboUI is not "pure function only" in the strictest sense. The render tree is rebuilt,
+but certain element instances can own persistent widget state.
 
 That is why this app constructs `demoList` once in the constructor and reuses it.
 
@@ -1235,7 +1280,8 @@ Current input-dispatch responsibilities are:
 - delete/backspace compatibility helpers
 - trace helpers
 
-In a larger app, I would treat input dispatcher as its own collaborator even if you still call the overall structure MVC.
+In a larger app, I would treat input dispatcher as its own collaborator even if you still call the overall structure
+MVC.
 
 ## 20. Specific Strengths of the Current File
 
@@ -1243,7 +1289,8 @@ This file is actually better than many first-pass TUIs. These parts are solid.
 
 ### 20.1 Good use of semantic actions
 
-It uses `Actions.PAGE_DOWN`, `MOVE_LEFT`, `MOVE_RIGHT`, `SELECT`, `CANCEL`, `DELETE_BACKWARD` instead of hardcoding raw keys everywhere.
+It uses `Actions.PAGE_DOWN`, `MOVE_LEFT`, `MOVE_RIGHT`, `SELECT`, `CANCEL`, `DELETE_BACKWARD` instead of hardcoding raw
+keys everywhere.
 
 That is correct TamboUI style.
 
@@ -1303,7 +1350,8 @@ That is workable, but not as explicit as it could be.
 
 ### 21.4 The filter editing logic is custom text-input logic
 
-That is okay for a small POC, but if the filtering field becomes richer later, you may want a dedicated text-input state/widget instead of manual character accumulation.
+That is okay for a small POC, but if the filtering field becomes richer later, you may want a dedicated text-input
+state/widget instead of manual character accumulation.
 
 ## 22. What This Means for the App You Want To Build
 
@@ -1413,7 +1461,8 @@ Those are already good fits.
 For example:
 
 ```java
-record DescriptionModel(String title, List<String> lines) { }
+record DescriptionModel(String title, List<String> lines) {
+}
 ```
 
 This can reduce branching noise in `render()`.
@@ -1444,7 +1493,8 @@ Yes, absolutely. A nested `Controller` + `View` + `KeyHandler` structure would b
 
 ### Is redraw being manually forced here?
 
-Not in the normal sense. The app mutates state and returns `HANDLED`; ToolkitRunner/TuiRunner then redraw the next frame automatically.
+Not in the normal sense. The app mutates state and returns `HANDLED`; ToolkitRunner/TuiRunner then redraw the next frame
+automatically.
 
 ### Are the special-key workarounds justified?
 
@@ -1462,4 +1512,5 @@ If your goal is to become expert and build a similar app, study in this order:
 6. Core concepts: buffer, frame, diffing, layout constraints.
 7. Inline toolkit, only if your future app should preserve scroll history.
 
-If you internalize those seven topics, you will stop treating TamboUI as mysterious and start treating it as a predictable rendering/event system.
+If you internalize those seven topics, you will stop treating TamboUI as mysterious and start treating it as a
+predictable rendering/event system.
