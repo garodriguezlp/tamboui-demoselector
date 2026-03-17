@@ -36,6 +36,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.IntConsumer;
+import java.util.function.IntSupplier;
 
 import dev.tamboui.layout.Constraint;
 import dev.tamboui.style.Color;
@@ -57,7 +59,7 @@ public class DemoSelectorRefactored extends ToolkitApp {
     private DemoSelectorRefactored() {
         this.model = new DemoSelectorModel();
         this.view = new DemoSelectorView(model);
-        this.controller = new DemoSelectorController(model, this::quit);
+        this.controller = new DemoSelectorController(model, view::selectedIndex, view::setSelectedIndex, this::quit);
     }
 
     /**
@@ -80,6 +82,7 @@ public class DemoSelectorRefactored extends ToolkitApp {
     @Override
     protected void onStart() {
         model.initialize();
+        view.setSelectedIndex(model.selectedIndex());
     }
 
     @Override
@@ -355,17 +358,37 @@ final class DemoSelectorModel {
 final class DemoSelectorView {
 
     private final DemoSelectorModel model;
+    private final ListElement<?> listWidget;
 
     DemoSelectorView(DemoSelectorModel model) {
         this.model = model;
+        this.listWidget = list()
+            .highlightSymbol("> ")
+            .highlightColor(Color.YELLOW)
+            .autoScroll()
+            .scrollbar()
+            .scrollbarThumbColor(Color.CYAN);
     }
 
     Element render(java.util.function.Function<KeyEvent, EventResult> keyHandler) {
+        // Keep model state aligned with list widget default navigation.
+        if (listWidget.selected() >= 0) {
+            model.selectIndex(listWidget.selected());
+        }
+
         return dock()
             .top(headerPanel())
             .left(listPanel(keyHandler), Constraint.percentage(50))
             .center(descriptionPanel())
             .bottom(footerPanel());
+    }
+
+    int selectedIndex() {
+        return listWidget.selected();
+    }
+
+    void setSelectedIndex(int index) {
+        listWidget.selected(index);
     }
 
     private Element headerPanel() {
@@ -375,14 +398,7 @@ final class DemoSelectorView {
     }
 
     private Element listPanel(java.util.function.Function<KeyEvent, EventResult> keyHandler) {
-        var listWidget = list()
-            .highlightSymbol("> ")
-            .highlightColor(Color.YELLOW)
-            .autoScroll()
-            .scrollbar()
-            .scrollbarThumbColor(Color.CYAN)
-            .items(displayLines())
-            .selected(model.selectedIndex());
+        listWidget.items(displayLines());
 
         return panel(listWidget)
             .title(model.title())
@@ -456,14 +472,27 @@ final class DemoSelectorController {
         System.getProperty("demo.selector.trace.file", "demo-selector-keys.log"));
 
     private final DemoSelectorModel model;
+    private final IntSupplier selectedIndexReader;
+    private final IntConsumer selectedIndexWriter;
     private final Runnable quitAction;
 
-    DemoSelectorController(DemoSelectorModel model, Runnable quitAction) {
+    DemoSelectorController(
+        DemoSelectorModel model,
+        IntSupplier selectedIndexReader,
+        IntConsumer selectedIndexWriter,
+        Runnable quitAction) {
         this.model = model;
+        this.selectedIndexReader = selectedIndexReader;
+        this.selectedIndexWriter = selectedIndexWriter;
         this.quitAction = quitAction;
     }
 
     EventResult handle(KeyEvent event) {
+        var currentSelection = selectedIndexReader.getAsInt();
+        if (currentSelection >= 0) {
+            model.selectIndex(currentSelection);
+        }
+
         var actionCancel = event.matches(Actions.CANCEL);
         var actionDeleteBackward = event.matches(Actions.DELETE_BACKWARD);
         var isRawBackspace = isRawBackspace(event);
@@ -472,12 +501,12 @@ final class DemoSelectorController {
 
         if (event.matches(Actions.PAGE_DOWN)) {
             model.moveToNextModuleHeader();
-            return EventResult.HANDLED;
+            return handledAndSync();
         }
 
         if (event.matches(Actions.PAGE_UP)) {
             model.moveToPreviousModuleHeader();
-            return EventResult.HANDLED;
+            return handledAndSync();
         }
 
         if (event.matches(Actions.MOVE_LEFT)) {
@@ -498,21 +527,20 @@ final class DemoSelectorController {
 
         if (actionCancel && model.hasFilter()) {
             model.clearFilter();
-            model.selectIndex(model.findFirstSelectable());
             traceKeyEvent(event, "CANCEL_CLEAR", eventKind);
-            return EventResult.HANDLED;
+            return handledAndSync();
         }
 
         if (isDeleteLikeEvent(event, actionDeleteBackward, isRawBackspace) && model.hasFilter()) {
             model.backspaceFilter();
             traceKeyEvent(event, "BACKSPACE_APPLIED", eventKind);
-            return EventResult.HANDLED;
+            return handledAndSync();
         }
 
         if (isFilterCharacter(event)) {
             model.appendFilter(event.character());
             traceKeyEvent(event, "FILTER_APPEND", eventKind);
-            return EventResult.HANDLED;
+            return handledAndSync();
         }
 
         traceKeyEvent(event, "UNHANDLED", eventKind);
@@ -530,7 +558,7 @@ final class DemoSelectorController {
                 model.moveToParentModuleHeader();
             }
         }
-        return EventResult.HANDLED;
+        return handledAndSync();
     }
 
     private EventResult handleMoveRight() {
@@ -542,7 +570,7 @@ final class DemoSelectorController {
                 model.moveToFirstChildIfPresent();
             }
         }
-        return EventResult.HANDLED;
+        return handledAndSync();
     }
 
     private EventResult handleSelect() {
@@ -554,6 +582,11 @@ final class DemoSelectorController {
                 model.chooseDemoAndQuit(selected.demo(), quitAction);
             }
         }
+        return handledAndSync();
+    }
+
+    private EventResult handledAndSync() {
+        selectedIndexWriter.accept(model.selectedIndex());
         return EventResult.HANDLED;
     }
 
